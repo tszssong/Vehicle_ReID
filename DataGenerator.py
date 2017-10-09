@@ -5,8 +5,8 @@ import os
 import mxnet as mx
 import time
 
-datafn = '/media/data1/mzhang/data/car_ReID_for_zhangming/data/data.list'
-
+#datafn = '/media/data1/mzhang/data/car_ReID_for_zhangming/data/data.list'
+datafn = '/home/chuanruihu/list_dir/Person_train.list'
 def get_datalist(datafn):
   datafile = open(datafn, 'r')
   datalist = datafile.readlines()
@@ -547,7 +547,7 @@ def get_data_label_proxy_mxnet(data_infos, label_infos, datalist, data_rndidx, b
 
 
 from ctypes import *
-func_c = CDLL('./augmentation_threads/libaugment.so')
+func_c = CDLL('augmentation_threads/libaugment.so')
 def aug_threads_c(paths, tmpshape):
   imgnum, chs, stdH, stdW = tmpshape 
   imgsout = np.zeros((imgnum, stdH, stdW, chs), dtype=np.float32)
@@ -574,31 +574,48 @@ def aug_threads_c2(paths, tmpshape, imgsout):
                  imgsout.ctypes.data_as(POINTER(c_float)))
 #  t1 = time.time()
 #  print t1-t0
-#  for i in xrange(imgnum):
-#    img = imgsout[i]
-#    img = img.swapaxes(0, 1)
-#    img = img.swapaxes(1, 2)
-#    cv2.imshow('hi', img)
-#    cv2.waitKey(0)
+  for i in xrange(imgnum):
+    img = imgsout[i]
+    img = img.swapaxes(0, 1)
+    img = img.swapaxes(1, 2)
+    cv2.imshow('hi', img)
+    cv2.waitKey(0)
 
 
-def  aug_plate_threads_c(paths, tmpplates, tmpshape, imgsout):
+def  aug_plate_threads_c(paths, tmpshape, imgsout):
   imgnum, chs, stdH, stdW = tmpshape 
-  plates = np.asarray(tmpplates)
+#  plates = np.asarray(tmpplates)
   strs = (c_char_p*imgnum)()
   strs[:] = paths
 #  t0 = time.time()
-  func_c.do_augment_plate_threads(strs, plates.ctypes.data_as(POINTER(c_int)), 
-                 imgnum, stdH, stdW, imgsout.ctypes.data_as(POINTER(c_float)))
+  #hu
+#  print "hahhhha"
+  func_c.do_augment_threads(strs, imgnum, stdH, stdW, imgsout.ctypes.data_as(POINTER(c_float)))
+#  print "haha"
+#  func_c.do_augment_person_threads(strs,  
+#                 imgnum, stdH, stdW, imgsout.ctypes.data_as(POINTER(c_float)))
 #  t1 = time.time()
 #  print t1-t0
-#  for i in xrange(imgnum):
-#    print i, plates[i]
-#    img = imgsout[i]
-#    img = img.swapaxes(0, 1)
-#    img = img.swapaxes(1, 2)
+  
+  if False:
+    for i in xrange(imgnum):
+  #    print i, plates[i]
+       img = imgsout[i]*50+100
+       img[img>255.0] = 255.0
+       img[img<0.0] = 0.0
+       img = img.astype(np.uint8)
+       img = img.swapaxes(0, 1)
+       img = img.swapaxes(1, 2)
+  #     print str(i)
+       imgpath = './dataout/' + str(i) + '.jpg'
+       cv2.imwrite(imgpath, img)
+  #    print imgpath
+    exit() 
+    
+    
 #    cv2.imshow('hi', img)
 #    cv2.waitKey(0)
+   
   pass
 
 def  get_test_threads_c(paths, tmpshape, imgsout):
@@ -638,8 +655,9 @@ def get_data_label_proxy_mxnet_threads(data_infos, datas, label_infos, labels, d
     onecar = {}
     parts = onedata.split(',')
     onecar['path'] = parts[0]
-    onecar['id'] = parts[0].split('/')[-1]
-#    print onecar['id']
+    #onecar['id'] = parts[0].split('/')[-1]
+    onecar['id'] = parts[-1]
+    print onecar['id']
     onecar['son'] = parts[1]
     cars.append(onecar)
 
@@ -999,8 +1017,8 @@ def get_data_label_proxy_batch_plate_mxnet_threads(data_infos, datas, label_info
     onecar['id'] = parts[-1] 
 #    print onecar['id']
     onecar['son'] = parts[1]
-    p = parts[2].replace(' ', ',')
-    onecar['plate'] = np.asarray(eval(p), dtype=np.int32)
+    #p = parts[2].replace(' ', ',')
+    #onecar['plate'] = np.asarray(eval(p), dtype=np.int32)
     cars.append(onecar)
     carid = int(onecar['id'])
     oneinfo = '%s,%s,%s'%(parts[0], parts[1], parts[2])
@@ -1012,7 +1030,7 @@ def get_data_label_proxy_batch_plate_mxnet_threads(data_infos, datas, label_info
   labels['proxy_ZM'][:] = 1.0 
   
   tmpaths = []
-  tmpplates = []
+ # tmpplates = []
   carids = []
   for si in xrange(batchsize):
     onecar = cars[si]
@@ -1022,12 +1040,12 @@ def get_data_label_proxy_batch_plate_mxnet_threads(data_infos, datas, label_info
     carson = onecar['son']
     tmpath = carpath+'/'+carson
     tmpaths.append(tmpath)
-    tmpplates.append(onecar['plate'])
+  #  tmpplates.append(onecar['plate'])
  
 #  t1 = time.time()
 #  aug_data = aug_threads_c(tmpaths, data_infos[0][1])
   aug_data = datas['databuffer']
-  aug_plate_threads_c(tmpaths, tmpplates, data_infos[0][1], aug_data)
+  aug_plate_threads_c(tmpaths,  data_infos[0][1], aug_data)
 #  aug_threads_c2(tmpaths, data_infos[0][1], aug_data)
 #  t2 = time.time()
 

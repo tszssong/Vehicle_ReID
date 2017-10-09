@@ -17,6 +17,8 @@ Christian Szegedy, Sergey Ioffe, Vincent Vanhoucke, Alex Alemi
 note: image size must be:(299, 299)
 datashape = (1, 3, 299, 299)
 """
+import sys
+sys.path.insert(0, '/home/chuanruihu/')
 
 
 import numpy as np
@@ -229,6 +231,7 @@ def create_inception_resnet_v2(data, namepre='', args=None):
 #  reid_act = mx.sym.Activation(data=reid_fc1, act_type='tanh', name=namepre+'_fc1_relu')
 
   net = reid_fc1
+#  net = final_flatten
 
   return net, args
 
@@ -336,18 +339,19 @@ def CreateModel_Color2(ctx, batch_size, proxy_num, imagesize):
 
 
 def draw_inception_renet_v2():
-  featdim = 256
+  featdim = 128
   proxy_num = 1000
   batch_size = 4
-  reid_net = create_reid_net(batch_size, proxy_num)
+  args_all = None
+  data0 = mx.sym.Variable('data0')
+  reid_net, args_all = create_inception_resnet_v2(data0, namepre='part1', args=args_all)
   #darw net
-  datashape = (batch_size, 3, 299, 299)
-  yshape = (batch_size, featdim)
-  Zshape = (proxy_num, featdim)
-  Mshape = (batch_size, proxy_num)
+  datashape = (batch_size, 3, 200, 80)
+  net = reid_net.simple_bind(ctx=mx.gpu(0), data0=datashape)
+  print net.output_dict
   #graph = mx.visualization.plot_network(reid_net, shape={'data':datashape, 'proxy_y':yshape, 'proxy_Z':Zshape, 'proxy_M':Mshape})
-  graph = mx.visualization.plot_network(reid_net)
-  graph.render('inception_renet_v2_proxy_nca') 
+  #graph = mx.visualization.plot_network(reid_net)
+  #graph.render('inception_renet_v2_proxy_nca') 
 
 
 def CreateModel_Color_Split_test():

@@ -1,5 +1,9 @@
 *.pyc
 *.sw?
+*.sv*
+*.jpg
+*.bak
+dataout
 MDL_PARAM/params*
 Result
 ImageResult

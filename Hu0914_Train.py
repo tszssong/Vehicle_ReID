@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(0, '/home/chuanruihu/')
+sys.path.insert(0, '/home/yunfeiwu/')
 import logging
 import numpy as np
 import mxnet as mx
@@ -68,7 +68,6 @@ class Proxy_Metric(metric.EvalMetric):
     for i in xrange(self.num):
       self.num_inst[i] += 1
     eachloss = preds[0].asnumpy()
-#    print eachloss
     loss = eachloss.mean()
     self.sum_metric[0] += loss
 #    print loss, len(preds)#, labels
@@ -234,7 +233,7 @@ def Do_Proxy_NCA_Train2():
 
 
 def Do_Proxy_NCA_Train3():
-  print 'Partial Proxy NCA Training..PERSON.'
+  print 'Partial Proxy NCA Training...'
 
   # set up logger
   logger = logging.getLogger()
@@ -245,13 +244,13 @@ def Do_Proxy_NCA_Train3():
 #  ctxs = [mx.gpu(0), mx.gpu(1), mx.gpu(2), mx.gpu(3)]
 #  ctxs = [mx.gpu(2), mx.gpu(3), mx.gpu(4), mx.gpu(5), mx.gpu(6), mx.gpu(7)]
 #  ctxs = [mx.gpu(2), mx.gpu(1), mx.gpu(3)]
-  ctxs = [mx.gpu(0), mx.gpu(2)]
-#  ctxs = [mx.gpu(2)]
+  ctxs = [mx.gpu(1), mx.gpu(2)]
+#  ctxs = [mx.gpu(0)]
   
   devicenum = len(ctxs) 
 
   num_epoch = 1000000
-  batch_size = 100*devicenum
+  batch_size = 56*devicenum
   show_period = 1000
 
   assert(batch_size%devicenum==0)
@@ -260,22 +259,11 @@ def Do_Proxy_NCA_Train3():
   bucket_key = bsz_per_device
 
   featdim = 128
-#  total_proxy_num = 52000
-#  total_proxy_num = 40353
-  total_proxy_num = 8070
-#  total_proxy_num = 4035
-
-#  proxy_batch = 34574
-#  proxy_batch = 150393
-  proxy_batch = 29949
-#  proxy_batch = 15130
-
-#  proxy_num = 40353
-  proxy_num = 8070
-#  proxy_num = 4035
-
+  total_proxy_num = 60000#604429#323255#261708#220160#142149#196166#406448#548597#51476
+  proxy_batch = 4000
+  proxy_num = proxy_batch
   clsnum = proxy_num
-  data_shape = (batch_size, 3, 240, 120)
+  data_shape = (batch_size, 3, 200, 200)
   proxy_yM_shape = (batch_size, proxy_num)
   proxy_Z_shape = (proxy_num, featdim)
   proxy_ZM_shape = (batch_size, proxy_num)
@@ -290,22 +278,17 @@ def Do_Proxy_NCA_Train3():
   datapath = '/home/chuanruihu/' #604429,#323255
 
 #  datafn_list = ['front_plate_image_list_train.list', 'back_plate_image_list_train.list'] #261708 calss number.
-#  datafn_list = ['/list_dir/Person_train.list']#['front_plate_image_list_train.list'] #261708 calss number.
-#  datafn_list = ['/list_dir/Person_train.list']
-#  datafn_list = ['/list_dir/pub_xunzhimei.list']
-  datafn_list = ['/list_dir/pub_xunzhimei_0.20.list'] #8070
-#  datafn_list = ['/list_dir/pub_xunzhimei_0.10.list'] #4035
-#  datafn_list = ['/list_dir/pub.list']
+  datafn_list = ['/list_dir/Person_train.list']#['front_plate_image_list_train.list'] #261708 calss number.
 #  datafn_list = ['data_each_part6.list', 'data_each_part7.list'] #142149 calss number.
 
   for di in xrange(len(datafn_list)):
     datafn_list[di] = datapath + datafn_list[di]
-  data_train = PersonReID_Proxy_Batch_Plate_Mxnet_Iter2(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn_list, total_proxy_num, featdim, proxy_batch, proxy_num, 1)
+  data_train = PersonReID_Proxy_Batch_Plate_Mxnet_Iter2(['data'], [data_shape], ['proxy_yM', 'proxy_ZM'], [proxy_yM_shape, proxy_ZM_shape], datafn_list, total_proxy_num, featdim, proxy_batch, 1)
   
-  dlr = 200000/batch_size
+  dlr = 400000/batch_size
 #  dlr_steps = [dlr, dlr*2, dlr*3, dlr*4]
 
-  lr_start = (10**-3)*1
+  lr_start = (10**-1)*1
   lr_min = 10**-5
   lr_reduce = 0.95
   lr_stepnum = np.log(lr_min/lr_start)/np.log(lr_reduce)
@@ -317,7 +300,7 @@ def Do_Proxy_NCA_Train3():
 #  param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
 #  param_prefix = 'MDL_PARAM/params3_proxy_nca/car_reid'
   param_prefix = 'MDL_PARAM/params4_proxy_nca/car_reid'
-  load_paramidx = 3
+  load_paramidx = None #3
 
   reid_net = proxy_nca_model.CreateModel_Color2(None, bsz_per_device, proxy_num, data_shape[2:])
 
@@ -370,8 +353,7 @@ def Do_Proxy_NCA_Train3():
   reid_model.fit(train_data=data_train, eval_metric=proxy_metric,
                  optimizer='sgd',
                  optimizer_params=optimizer_params, 
-                 #initializer=mx.init.Normal(),
-                 initializer=mx.init.Xavier(),
+                 initializer=mx.init.Normal(),
                  begin_epoch=0, num_epoch=num_epoch, 
                  eval_end_callback=None,
                  kvstore='device',# monitor=mon,

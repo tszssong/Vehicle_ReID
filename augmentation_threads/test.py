@@ -8,7 +8,7 @@ func_c = CDLL('./build/libaugment.so')
 
 def test():
   imgnum = 150
-  fns = ['/home/mingzhang/Pictures/plates1.jpg']*imgnum
+  fns = ['/mnt/data1/chuanruihu/reid/chongqingxiaoqu/201706120800/10.209.79.27-4-201706120800-201706121000/5/5_0_4051.jpg']*imgnum
   num = len(fns) 
   strs = (c_char_p*num)()
   strs[:] = fns
