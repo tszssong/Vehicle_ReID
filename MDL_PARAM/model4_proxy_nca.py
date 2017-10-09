@@ -18,7 +18,7 @@ note: image size must be:(299, 299)
 datashape = (1, 3, 299, 299)
 """
 import sys
-sys.path.insert(0, '/home/chuanruihu/')
+sys.path.insert(0, 'distribution/')
 
 
 import numpy as np

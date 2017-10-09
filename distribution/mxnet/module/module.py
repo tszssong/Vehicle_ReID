@@ -10,10 +10,7 @@ from .. import ndarray as nd
 from .. import optimizer as opt
 
 from .executor_group import DataParallelExecutorGroup
-from ..model import _create_kvstore, _initialize_kvstore, _update_params, _update_params_on_kvstore
-from ..model import _initialize_kvstore_partial, _update_params_on_kvstore_partial
-from ..model import _pull_params_on_kvstore_partial
-from ..model import _pull_ori_params_on_kvstore_partial
+from ..model import _create_kvstore, _initialize_kvstore, _update_params, _update_params_on_kvstore, _reset_params_on_kvstore
 from ..initializer import Uniform
 
 from .base_module import BaseModule
@@ -42,7 +39,7 @@ class Module(BaseModule):
         Default `None`, indicating no network parameters are fixed.
     """
     def __init__(self, symbol, data_names=('data',), label_names=('softmax_label',),
-                 logger=logging, context=ctx.cpu(), work_load_list=None, fixed_param_names=None, ori_parames={}, ori_indexes={}):
+                 logger=logging, context=ctx.cpu(), work_load_list=None, fixed_param_names=None):
         super(Module, self).__init__(logger=logger)
 
         if isinstance(context, ctx.Context):
@@ -80,27 +77,12 @@ class Module(BaseModule):
         self._data_shapes = None
         self._label_shapes = None
 
-        self._ori_shapes = {}
-        self._ori_indexes = ori_indexes
-        self._ori_parames = ori_parames
-        for key in self._ori_parames:
-            oripa = self._ori_parames[key]
-            self._ori_shapes[key] = oripa.shape
-
     def _reset_bind(self):
         """Internal function to reset binded state."""
         self.binded = False
         self._exec_group = None
         self._data_shapes = None
         self._label_shapes = None
-
-    @property
-    def ori_indexes(self):
-        return self._ori_indexes
-
-    @property
-    def ori_parames(self):
-        return self._ori_parames
 
     @property
     def data_names(self):
@@ -143,18 +125,6 @@ class Module(BaseModule):
         """
         assert self.binded
         return self._exec_group.get_output_shapes()
-
-    def pull_params(self):
-        _pull_params_on_kvstore_partial(self._exec_group.param_arrays,
-                                      self._param_names,
-                                      self._ori_shapes,
-                                      self._ori_indexes,
-                                      self._kvstore)
-
-    def pull_ori_params(self):
-        _pull_ori_params_on_kvstore_partial(self._ori_parames, 
-                                            self._param_names, 
-                                            self._kvstore)
 
     def get_params(self):
         """Get current parameters.
@@ -235,7 +205,10 @@ class Module(BaseModule):
 
         # copy the initialized parameters to devices
         self._exec_group.set_params(self._arg_params, self._aux_params)
-
+        # by starimpact
+        if self._update_on_kvstore:
+            param_list = [args[0] for args in self._exec_group.param_arrays]
+            _reset_params_on_kvstore(param_list, self._kvstore)
 
     def bind(self, data_shapes, label_shapes=None, for_training=True,
              inputs_need_grad=False, force_rebind=False, shared_module=None,
@@ -380,18 +353,13 @@ class Module(BaseModule):
             self._updater = opt.get_updater(optimizer)
         if kvstore:
             # copy initialized local parameters to kvstore
-            _initialize_kvstore_partial(kvstore=kvstore,
-                                fixed_params=self._fixed_param_names,
+            _initialize_kvstore(kvstore=kvstore,
                                 param_arrays=self._exec_group.param_arrays,
                                 arg_params=self._arg_params,
                                 param_names=self._param_names,
-                                ori_params=self._ori_parames,
-                                ori_shapes=self._ori_shapes,
-                                ori_indexes=self._ori_indexes,
                                 update_on_kvstore=update_on_kvstore)
         if update_on_kvstore:
             kvstore.set_optimizer(self._optimizer)
-            kvstore.set_partial_optimizer(self._optimizer)
 
         self.optimizer_initialized = True
 
@@ -444,11 +412,8 @@ class Module(BaseModule):
 
         self._params_dirty = True
         if self._update_on_kvstore:
-            _update_params_on_kvstore_partial(self._exec_group.param_arrays,
+            _update_params_on_kvstore(self._exec_group.param_arrays,
                                       self._exec_group.grad_arrays,
-                                      self._param_names,
-                                      self._ori_shapes,
-                                      self._ori_indexes,
                                       self._kvstore)
         else:
             _update_params(self._exec_group.param_arrays,

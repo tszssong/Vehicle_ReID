@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(0, '/home/chuanruihu/')
+sys.path.insert(0, 'distribution/')
 import logging
 import numpy as np
 import mxnet as mx

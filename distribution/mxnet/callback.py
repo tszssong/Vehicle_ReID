@@ -6,21 +6,7 @@ import logging
 import math
 import sys
 import time
-import socket
-import struct
-import fcntl
-import os
 from .model import save_checkpoint
-
-def get_local_ip():
-  ifname = os.getenv('DMLC_INTERFACE')
-  if ifname is None:
-    localip = socket.gethostbyname(socket.gethostname())
-  else:
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    localip = socket.inet_ntoa(fcntl.ioctl(s.fileno(), 0x8915, struct.pack('512s',ifname[:15]))[20:24])
-  return localip
-
 
 def do_checkpoint(prefix, period=1):
     """Callback to checkpoint the model to prefix every epoch.
@@ -89,7 +75,6 @@ class Speedometer(object):
         self.init = False
         self.tic = 0
         self.last_count = 0
-        self.ip = get_local_ip()
 
     def __call__(self, param):
         """Callback to Show speed."""
@@ -105,11 +90,11 @@ class Speedometer(object):
                     name_value = param.eval_metric.get_name_value()
                     param.eval_metric.reset()
                     for name, value in name_value:
-                        logging.info('IP[%s] Epoch[%d] Batch [%d]\tSpeed: %.2f samples/sec\tTrain-%s=%f',
-                                     self.ip, param.epoch, count, speed, name, value)
+                        logging.info('Epoch[%d] Batch [%d]\tSpeed: %.2f samples/sec\tTrain-%s=%f',
+                                     param.epoch, count, speed, name, value)
                 else:
-                    logging.info("IP[%s] Iter[%d] Batch [%d]\tSpeed: %.2f samples/sec",
-                                 self.ip, param.epoch, count, speed)
+                    logging.info("Iter[%d] Batch [%d]\tSpeed: %.2f samples/sec",
+                                 param.epoch, count, speed)
                 self.tic = time.time()
         else:
             self.init = True

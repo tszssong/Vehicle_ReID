@@ -19,21 +19,19 @@ class KVStoreServer(object):
         """
         self.kvstore = kvstore
         self.handle = kvstore.handle
-        self.init_logging = False
+        self.init_logginig = False
 
     def _controller(self):
         """return the server controller"""
         def server_controller(cmd_id, cmd_body, _):
             """server controler"""
-            if not self.init_logging:
+            if not self.init_logginig:
                 # the reason put the codes here is because we cannot get
                 # kvstore.rank earlier
                 head = '%(asctime)-15s Server[' + str(
                     self.kvstore.rank) + '] %(message)s'
-                logname = './server_%d.log'%(self.kvstore.rank)
-                logging.basicConfig(level=logging.DEBUG, format=head,
-                                    filename=logname, filemode='w')
-                self.init_logging = True
+                logging.basicConfig(level=logging.DEBUG, format=head)
+                self.init_logginig = True
 
             if cmd_id == 0:
                 try:
@@ -41,13 +39,6 @@ class KVStoreServer(object):
                 except:
                     raise
                 self.kvstore.set_optimizer(optimizer)
-            # when cmd==1
-            elif cmd_id == 1:
-                try:
-                    optimizer = pickle.loads(cmd_body)
-                except:
-                    raise
-                self.kvstore.set_partial_optimizer(optimizer)
             else:
                 print ("server %d, unknown command (%d, %s)" % (
                     self.kvstore.rank, cmd_id, cmd_body))
