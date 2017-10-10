@@ -57,10 +57,11 @@ def load_checkpoint(model, prefix, epoch, pZshape):
 class Proxy_Metric(metric.EvalMetric):
   def __init__(self, saveperiod=1, batch_hardidxes=[]):
     print "hello metric init..."
-    super(Proxy_Metric, self).__init__('proxy_metric', 2)
+    super(Proxy_Metric, self).__init__('proxy_metric', 3)
     self.p_inst = 0
     self.saveperiod=saveperiod
     self.batch_hardidxes = batch_hardidxes
+    self.hard = -np.log(0.5)
 
   def update(self, labels, preds):
     self.p_inst += 1
@@ -70,18 +71,11 @@ class Proxy_Metric(metric.EvalMetric):
 #    print eachloss
     loss = eachloss.mean()
     self.sum_metric[0] += loss
-    if len(preds) > 1:
+    self.sum_metric[1] += np.sum(eachloss>self.hard)*100./len(eachloss)
+    if len(preds)>1:
       loss2 = preds[1].asnumpy().mean()
-      self.sum_metric[1] += loss2
-#    print loss, len(preds)#, labels
-#    self.sum_metric[1] += np.sum(eachloss<=0.0)
-#    self.sum_metric[2] += np.sum(eachloss>0.0)
-#    if loss < 0: self.batch_hardidxes[:] = eachloss
-#    for bi in xrange(len(eachloss)):
-#      oneloss = eachloss[bi]
-#      if oneloss*5 > loss:#store harder example
-#        self.batch_hardidxes.append([bi, oneloss])
-    
+      self.sum_metric[2] += loss2
+   
 
 def do_batch_end_call(reid_model, param_prefix, \
                       show_period, \
@@ -205,7 +199,7 @@ def Do_Proxy_NCA_Train3():
 #  param_prefix = 'MDL_PARAM/params2_proxy_nca/car_reid'
 #  param_prefix = 'MDL_PARAM/params3_proxy_nca/car_reid'
   param_prefix = 'MDL_PARAM/params4_proxy_nca/car_reid'
-  load_paramidx = None
+  load_paramidx = 9999
 
   reid_net = proxy_nca_model.CreateModel_Color_NSoftmax(None, bsz_per_device, proxy_num, data_shape[2:])
 
