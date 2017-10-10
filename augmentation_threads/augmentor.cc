@@ -98,6 +98,7 @@ extern "C" int do_augment_threads(char *pfns[], int num,
 int rnd_crop(cv::Mat &matIn);
 int rnd_rotate(cv::Mat &matIn, float randv);
 int normalize_img(cv::Mat &matIn);
+int normalize_img2(cv::Mat &matIn);
 int rnd_mask(cv::Mat &matIn);
 int rnd_block_mask(cv::Mat &matIn);
 int part_crop(cv::Mat &matIn, int *pcrop);
@@ -150,7 +151,8 @@ void do_augment_onethread(void *p)
   //reisze
   cv::resize(img, img, cv::Size(stdW, stdH));
   //normalize
-  normalize_img(img);
+//  normalize_img(img);
+  normalize_img2(img);
   //rotate
 //  rnd_rotate(img, randv);
   //flip
@@ -289,6 +291,15 @@ int normalize_img(cv::Mat &matIn)
   fstdv /= 3.0f;
 //  cout << fmean << "," << fstdv << endl;
   matIn.convertTo(matIn, -1, 1.0f/fstdv, -fmean/fstdv);
+//  cv::meanStdDev(matIn, matmean, matstdv);
+//  cout << matmean << matstdv << endl;
+
+  return 0;
+}
+
+int normalize_img2(cv::Mat &matIn)
+{ 
+  matIn.convertTo(matIn, CV_32FC3, 1.0/255, 0);
 //  cv::meanStdDev(matIn, matmean, matstdv);
 //  cout << matmean << matstdv << endl;
 

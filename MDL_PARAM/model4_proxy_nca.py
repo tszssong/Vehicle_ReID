@@ -338,6 +338,77 @@ def CreateModel_Color2(ctx, batch_size, proxy_num, imagesize):
   return reid_net 
 
 
+def create_reid_nsoftmax_net(batch_size, proxy_num):
+  data0 = mx.sym.Variable('data')
+  proxy_yM = mx.sym.Variable('proxy_yM')
+  proxy_Z = mx.sym.Variable(name='proxy_Z_weight',
+                                 shape=(proxy_num, 128), dtype=np.float32)
+  args_all = None
+  feat_final, args_all = create_inception_resnet_v2(data0, namepre='part1', args=args_all)
+#
+  proxy_ncas = []
+  margin_ncas = []
+  dists = []
+  oth_dists = []
+  min_value =10**-36
+  norm_value = 32
+  norm_value = (norm_value)**0.5
+  logging.info('norm_value:%f, min_value:%e', norm_value, min_value)
+
+  #norm
+  znorm_loss = None
+  if norm_value>0:
+#    proxy_Z = mx.sym.L2Normalization(proxy_Z) * norm_value
+#    feat_final = mx.sym.L2Normalization(feat_final) * norm_value
+    proxy_Znorm = mx.sym.sum_axis(proxy_Z**2, axis=1)
+    proxy_Znorm = mx.sym.sqrt(proxy_Znorm) + min_value
+
+    #znorm_loss = mx.sym.square(proxy_Znorm - norm_value)
+    znorm_loss = mx.sym.abs(proxy_Znorm - 1.0)
+    znorm_loss = mx.sym.sum(znorm_loss)#/proxy_num
+    znorm_loss = mx.sym.MakeLoss(znorm_loss)
+
+    proxy_Znorm = mx.sym.Reshape(proxy_Znorm, shape=(-2, 1))
+    proxy_Z = mx.sym.broadcast_div(proxy_Z, proxy_Znorm) * norm_value
+
+    feat_finalnorm = mx.sym.sum_axis(feat_final**2, axis=1)
+    feat_finalnorm = mx.sym.sqrt(feat_finalnorm) + min_value
+    feat_finalnorm = mx.sym.Reshape(feat_finalnorm, shape=(-2, 1))
+    feat_final = mx.sym.broadcast_div(feat_final, feat_finalnorm) * norm_value
+
+  softlayer = mx.sym.FullyConnected(data=feat_final, weight=proxy_Z, num_hidden=proxy_num, no_bias=True)
+
+  proxy_yMs = mx.sym.SliceChannel(proxy_yM, axis=0, num_outputs=batch_size, squeeze_axis=True, name='proxy_yM_slice')
+
+  softmaxact_o = mx.sym.SoftmaxActivation(softlayer, name='softmaxact_o')
+
+  softmaxacts_o = mx.sym.SliceChannel(softmaxact_o, axis=0, num_outputs=batch_size, name='softmaxact_slice_o')
+  costvals_o = []
+  for bi in xrange(batch_size):
+    oneact = softmaxacts_o[bi]
+    oney = proxy_yMs[bi]
+    oneact = mx.sym.Reshape(oneact, shape=(-1, 1))
+    onecost = mx.sym.Take(data=oneact, index=oney) + min_value
+    costvals_o.append(onecost)
+
+  costall_o = mx.sym.Concat(*costvals_o, dim=0)
+  costall_o = -mx.sym.log(costall_o)
+  reid_net = mx.sym.MakeLoss(costall_o)
+  if znorm_loss is not None:
+    reid_net = mx.sym.Group([reid_net, znorm_loss])
+
+  return reid_net
+
+
+def CreateModel_Color_NSoftmax(ctx, batch_size, proxy_num, imagesize):
+  print 'creating network normalized softmax network...'
+
+  reid_net = create_reid_nsoftmax_net(batch_size, proxy_num)
+
+  return reid_net 
+
+
+
 def draw_inception_renet_v2():
   featdim = 128
   proxy_num = 1000
