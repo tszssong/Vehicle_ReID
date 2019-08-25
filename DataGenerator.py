@@ -4,7 +4,7 @@ import cPickle
 import os
 import mxnet as mx
 import time
-
+import pdb
 #datafn = '/media/data1/mzhang/data/car_ReID_for_zhangming/data/data.list'
 datafn = '/home/chuanruihu/list_dir/Person_train.list'
 def get_datalist(datafn):
@@ -1009,6 +1009,7 @@ def get_data_label_proxy_batch_plate_mxnet_threads_nsoftmax(data_infos, datas, l
 #    idx = rndidx_list[bi]
     data_batch.append(datalist[idx])
   cars = []
+#  pdb.set_trace()
   for onedata in data_batch:
     onecar = {}
     parts = onedata.split(',')
@@ -1071,7 +1072,8 @@ def get_data_label_proxy_batch_plate_mxnet_threads_nsoftmax(data_infos, datas, l
 
 
 
-def get_data_label_proxy_batch_plate_mxnet_threads(data_infos, datas, label_infos, labels, datalist, batch_now, caridnum,
+def get_data_label_proxy_batch_plate_mxnet_threads(data_infos, datas, 
+                   label_infos, labels, datalist, batch_now, caridnum,
                    rndcrop=True, rndcont=False, rndnoise=False, rndrotate=True,
                    rndhflip=True, normalize=True):
 #  print label_infos
@@ -1080,13 +1082,10 @@ def get_data_label_proxy_batch_plate_mxnet_threads(data_infos, datas, label_info
   if (batch_now+1)*batchsize > len(datalist):
     return None
   
-#  t0 = time.time()
   data_batch = []
   batch_info = []
-#  rndidx_list = np.random.permutation(len(datalist))
+  
   for idx in xrange(batch_now*batchsize, (batch_now+1)*batchsize):
-#  for bi in xrange(batchsize):
-#    idx = rndidx_list[bi]
     data_batch.append(datalist[idx])
   cars = []
   for onedata in data_batch:
@@ -1096,8 +1095,6 @@ def get_data_label_proxy_batch_plate_mxnet_threads(data_infos, datas, label_info
     onecar['id'] = parts[-1] 
 #    print onecar['id']
     onecar['son'] = parts[1]
-    #p = parts[2].replace(' ', ',')
-    #onecar['plate'] = np.asarray(eval(p), dtype=np.int32)
     cars.append(onecar)
     carid = int(onecar['id'])
     oneinfo = '%s,%s,%s'%(parts[0], parts[1], parts[2])
@@ -1119,22 +1116,12 @@ def get_data_label_proxy_batch_plate_mxnet_threads(data_infos, datas, label_info
     carson = onecar['son']
     tmpath = carpath+'/'+carson
     tmpaths.append(tmpath)
-  #  tmpplates.append(onecar['plate'])
  
-#  t1 = time.time()
-#  aug_data = aug_threads_c(tmpaths, data_infos[0][1])
   aug_data = datas['databuffer']
   aug_plate_threads_c(tmpaths,  data_infos[0][1], aug_data)
-#  aug_threads_c2(tmpaths, data_infos[0][1], aug_data)
-#  t2 = time.time()
 
-#  aug_data = aug_data.swapaxes(2, 3)
-#  aug_data = aug_data.swapaxes(1, 2)
-#  t3 = time.time()
   datas['data'][:] = aug_data
 
-#  t4 = time.time()
-  #ready same data
   dim2 = labels['proxy_ZM'].shape[1]
   for si in xrange(batchsize):
     onecar = cars[si]
@@ -1149,8 +1136,6 @@ def get_data_label_proxy_batch_plate_mxnet_threads(data_infos, datas, label_info
       cv2.imwrite('tmpimg/stdson%d.jpg'%(int(carid)), imgsave)
   datas_nd = [datas['data']]
   label_nd = [labels['proxy_yM'], labels['proxy_ZM']]
-#  t5 = time.time()
-#  print t5-t4, t4-t3, t3-t2, t2-t1, t1-t0
 
   return datas_nd, label_nd, carids, batch_info
 
@@ -1208,6 +1193,7 @@ def get_data_label_proxy_batch_plate_mxnet_threads2(data_infos, datas, label_inf
 #  t1 = time.time()
 #  aug_data = aug_threads_c(tmpaths, data_infos[0][1])
   aug_data = datas['databuffer']
+  print "******************"
   aug_plate_threads_c(tmpaths, tmpplates, data_infos[0][1], aug_data)
 #  aug_threads_c2(tmpaths, data_infos[0][1], aug_data)
 #  t2 = time.time()
@@ -1235,7 +1221,8 @@ def get_data_label_proxy_batch_plate_mxnet_threads2(data_infos, datas, label_inf
   label_nd = [labels['proxy_yM'], labels['proxy_ZM']]
 #  t5 = time.time()
 #  print t5-t4, t4-t3, t3-t2, t2-t1, t1-t0
-
+  print datas_nd
+  print labels_nd
   return datas_nd, label_nd, carids, batch_info
 
 
@@ -1311,7 +1298,8 @@ def get_test_data_label_pair_threads(data_infos, datas, label_infos, labels, dat
   cars = []
   for onedata in data_batch:
     onecar = {}
-    parts = onedata.split(',')
+    #hu
+    parts = onedata.split('*')
     onecar['path'] = parts[0]
     onecar['id'] = parts[-1] 
     onecar['son'] = parts[1]
