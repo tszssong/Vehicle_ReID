@@ -41,7 +41,7 @@ void do_augment_onethread(void *p);
 extern "C" int do_augment_threads(char *pfns[], int num, 
                                   int stdH, int stdW, float *pfImgOut)
 {
-  const int cdwMaxTNum = 48;
+  const int cdwMaxTNum = 36;
   static dg::ThreadPool *psPool = NULL;
   if (psPool == NULL)
   {
@@ -79,16 +79,10 @@ extern "C" int do_augment_threads(char *pfns[], int num,
 
   unique_lock<mutex> waitlc(countmt);
   cv.wait(waitlc, [&dwFinishCount, &fnum](){return dwFinishCount==fnum;});
-
-//  for (int fi = 0; fi < fnum; fi++)
-//  {
-//    cv::Mat &img = pParams[fi].matOut;
-//    memcpy(pfImgOut + fi * stdH * stdW * 3,  
-//           img.data, sizeof(float) * stdH * stdW * 3);
-////    cv::imshow("hi", img);
-////    cv::waitKey(0);
-//  }
-
+  for (int fi = 0; fi < fnum; fi++)
+  {
+ 
+  }
   delete []pParams;
   return 0;
 }
@@ -136,34 +130,27 @@ void do_augment_onethread(void *p)
     return;
   }
  
-//  printf("%s\n", strfn.c_str()); 
-  //mask rows
-//  int rnd0 = rand();
-//  if (rnd0 < (RAND_MAX / 4) * 3)
-  {
-//    rnd_mask(img);
-//    rnd_block_mask(img);
-  }
-  
-  //crop
-//  cout << "******************"<< endl;
-//  rnd_crop(img);
+  int rnd1 = rand();
+//   if (rnd1 < RAND_MAX / 2){
+//   	rnd_block_mask(img);
+//   }
+//   rnd_crop(img);
   //reisze
-  cv::resize(img, img, cv::Size(stdW, stdH));
-  //normalize
-//  normalize_img(img);
+  // cv::resize(img, img, cv::Size(stdW, stdH));
+//   //normalize
+// //  normalize_img(img);
   normalize_img2(img);
-  //rotate
-//  rnd_rotate(img, randv);
+//   //rotate
+//   rnd_rotate(img, randv);
   //flip
-//  int rnd = rand();
-//  if (rnd < RAND_MAX / 2)
-//  {
-//    cv::flip(img, img, 1);
-//  }
-//  img.copyTo(matOut);
+  int rnd = rand();
+  if (rnd < RAND_MAX / 2)
+  {
+    cv::flip(img, img, 1);
+  }
+  img.copyTo(matOut);
+  
   float *pfImg = (float*)img.data;
-
   float *pfOutR = pfImgOut;
   float *pfOutG = pfImgOut + stdH * stdW;
   float *pfOutB = pfImgOut + stdH * stdW * 2;
@@ -270,7 +257,7 @@ int rnd_rotate(cv::Mat &matIn, float randv)
   int dwH = matIn.rows;
   int dwW = matIn.cols;
   
- // float rndv = randMToN(0, 60) - 30;
+  float rndv = randMToN(0, 40) -20;
   cv::Mat matRot = cv::getRotationMatrix2D(cv::Point(dwW/2, dwH/2), randv, 1.0);
   cv::warpAffine(matIn, matIn, matRot, cv::Size(dwW, dwH));
 
@@ -375,7 +362,7 @@ void do_augment_plate_onethread(void *p);
 extern "C" int do_augment_plate_threads(char *pfns[], int *pdwPlates, int num, 
                                   int stdH, int stdW, float randv, float *pfImgOut)
 {
-  const int cdwMaxTNum = 48;
+  const int cdwMaxTNum = 24;
   static dg::ThreadPool *psPool = NULL;
   if (psPool == NULL)
   {
@@ -762,6 +749,7 @@ void do_get_test_onethread(void *p)
   cv::Mat &matOut = pParam->matOut;
   float *pfImgOut = pParam->pfImgOut;
   int *pdwRect = pParam->pdwRect;
+  float randv = pParam->randv;
 
   cv::Mat img = cv::imread(strfn);
   if (img.cols==0)
@@ -781,12 +769,22 @@ void do_get_test_onethread(void *p)
 
     return;
   }
+  
 
+//  rnd_crop(img);
   //reisze
   cv::resize(img, img, cv::Size(stdW, stdH));
   //normalize
-  normalize_img(img);
+  normalize_img2(img);
 
+//  rnd_rotate(img, randv);
+/*
+  int rnd =rand();
+  if ( rnd < RAND_MAX /2)
+  {
+  	cv::flip(img, img, 1);
+  }
+*/
   float *pfImg = (float*)img.data;
 
   float *pfOutR = pfImgOut;
